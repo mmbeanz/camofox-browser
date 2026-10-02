@@ -1,5 +1,34 @@
 import { describe, expect, jest, test } from '@jest/globals';
-import { hasGoogleOrganicResults } from '../../lib/google-serp.js';
+import { hasGoogleOrganicResults, pageHasGoogleOrganicResult } from '../../lib/google-serp.js';
+
+describe('pageHasGoogleOrganicResult', () => {
+  function runDetector(linkHref, baseURI = 'https://www.google.com/search?q=test') {
+    const heading = { closest: () => ({ href: linkHref }) };
+    globalThis.document = {
+      querySelector: () => ({ querySelectorAll: () => [heading] }),
+      baseURI,
+    };
+    return pageHasGoogleOrganicResult();
+  }
+
+  test('accepts direct external links', () => {
+    expect(runDetector('https://example.com/article')).toBe(true);
+  });
+
+  test('accepts google-hosted goto and url wrappers', () => {
+    expect(runDetector('/goto?url=https://example.com/article')).toBe(true);
+    expect(runDetector('/url?q=https://example.com/article')).toBe(true);
+  });
+
+  test('rejects ad links and other google paths', () => {
+    expect(runDetector('/aclk?sa=L')).toBe(false);
+    expect(runDetector('/search?q=test')).toBe(false);
+  });
+
+  test('rejects non-http links', () => {
+    expect(runDetector('javascript:void(0)')).toBe(false);
+  });
+});
 
 describe('hasGoogleOrganicResults', () => {
   test('returns immediately when an organic card is present', async () => {
